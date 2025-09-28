@@ -242,9 +242,10 @@ class VideoToGifExportOptionsDialogFragment : DialogFragment() {
       binding.mbResolution144p.id -> 144
       binding.mbResolution240p.id -> 240
       binding.mbResolution320p.id -> 320
+      binding.mbResolution480p.id -> 480
       binding.mbResolutionCustom.id -> {
         val inputValue = ("0" + binding.tietResolutionInputValue.text.toString()).toInt()
-        if (inputValue == 0) 240 else if (inputValue % 2 == 0) inputValue else inputValue + 1
+        if (inputValue == 0) 480 else if (inputValue % 2 == 0) inputValue else inputValue + 1
       }
 
       else -> throw IllegalArgumentException()

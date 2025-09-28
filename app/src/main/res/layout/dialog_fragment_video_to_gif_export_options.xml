@@ -63,7 +63,7 @@
                 style="@style/Widget.MaterialComponents.MaterialButtonToggleGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:checkedButton="@id/mbResolution240p"
+                app:checkedButton="@id/mbResolution480p"
                 app:selectionRequired="true"
                 app:singleSelection="true">
 
@@ -81,6 +81,11 @@
                   android:id="@+id/mbResolution320p"
                   style="@style/Theme.CuteGif.SegmentedButton"
                   android:text="@string/_320p" />
+
+                <com.google.android.material.button.MaterialButton
+                  android:id="@+id/mbResolution480p"
+                  style="@style/Theme.CuteGif.SegmentedButton"
+                  android:text="@string/_480p" />
 
                 <com.google.android.material.button.MaterialButton
                   android:id="@+id/mbResolutionCustom"

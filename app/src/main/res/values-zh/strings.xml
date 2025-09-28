@@ -14,6 +14,7 @@
   <string name="_144p">144P</string>
   <string name="_240p">240P</string>
   <string name="_320p">320P</string>
+  <string name="_480p">480P</string>
   <string name="join_qq_group_toast">QQ 群号已复制到剪贴板</string>
   <string name="convert_video_to_gif_simple_and_fast_in_main">视频转 GIF</string>
   <string name="crop_free">自由</string>
