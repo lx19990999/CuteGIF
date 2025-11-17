@@ -62,6 +62,13 @@
       android:resizeableActivity="true"
       android:theme="@style/Theme.CuteGif.Dialog" />
     <activity
+      android:name=".GifFixActivity"
+      android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|density|screenSize|smallestScreenSize"
+      android:exported="false"
+      android:launchMode="singleTask"
+      android:resizeableActivity="true"
+      android:theme="@style/Theme.CuteGif.Dialog" />
+    <activity
       android:name=".VideoToGifVideoFallbackActivity"
       android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|density|screenSize|smallestScreenSize"
       android:exported="false"

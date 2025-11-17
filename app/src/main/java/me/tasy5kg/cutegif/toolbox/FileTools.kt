@@ -113,8 +113,8 @@ object FileTools {
     }
   }
 
-  fun Uri.copyToInputFileDir(): String {
-    resetDirectory(MyConstants.INPUT_FILE_DIR)
+  fun Uri.copyToInputFileDir(resetDir: Boolean = true): String {
+    if (resetDir) resetDirectory(MyConstants.INPUT_FILE_DIR)
     val inputFilePath = MyConstants.INPUT_FILE_DIR + FileName(this).name
     MyApplication.appContext.contentResolver.openInputStream(this)!!.use { inputStream ->
       FileOutputStream(inputFilePath).use { outputStream ->

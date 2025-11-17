@@ -138,4 +138,12 @@
   <string name="import_file_failed_please_try">文件读取失败，请尝试在菜单中切换文件选取器</string>
   <string name="save_as_video">另存为视频</string>
   <string name="speed_warning_slower">ℹ️ 由于性能原因，当前预览画面的播放速度慢于您选择的速度。稍后导出时，将会按照您选择的速度生成 GIF。</string>
+  <string name="fix_gif_format">修复 GIF 格式</string>
+  <string name="fix_gif_format_description">修复 GIF 格式，修复后的 GIF 格式可以正常播放</string>
+  <string name="fixing_gif_format">正在修复 GIF 格式…</string>
+  <string name="fixing_gif_format_d_percent">正在修复 GIF 格式（%d%%）</string>
+  <string name="gif_format_fixed">GIF 格式已修复</string>
+  <string name="gif_format_fix_failed">GIF 格式修复失败</string>
+  <string name="no_files_selected">未选择文件</string>
+  <string name="processing_file_d_of_d" formatted="false">正在处理文件 %d / %d</string>
 </resources>

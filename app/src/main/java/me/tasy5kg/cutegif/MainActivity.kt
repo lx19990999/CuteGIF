@@ -57,6 +57,33 @@ class MainActivity : BaseActivity() {
   private val arlImportMvimgToGif13 = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
     it?.data?.data?.let { uri -> importFileTryCatch { ImportMvimgActivity.start(this, uri.copyToInputFileDir()) } }
   }
+  private val arlImportFixGifFormatDocument = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) {
+    if (it.isNotEmpty()) {
+      importFileTryCatch {
+        // Reset directory once before copying all files
+        me.tasy5kg.cutegif.toolbox.FileTools.resetDirectory(me.tasy5kg.cutegif.MyConstants.INPUT_FILE_DIR)
+        val filePaths = it.mapIndexed { index, uri -> uri.copyToInputFileDir(resetDir = index == 0) }
+        GifFixActivity.start(this, filePaths)
+      }
+    } else {
+      toast(R.string.no_files_selected)
+    }
+  }
+  private val arlImportFixGifFormat13 = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+    val uris = it?.data?.clipData?.let { clipData ->
+      (0 until clipData.itemCount).map { clipData.getItemAt(it).uri }
+    } ?: it?.data?.data?.let { listOf(it) } ?: emptyList()
+    if (uris.isNotEmpty()) {
+      importFileTryCatch {
+        // Reset directory once before copying all files
+        me.tasy5kg.cutegif.toolbox.FileTools.resetDirectory(me.tasy5kg.cutegif.MyConstants.INPUT_FILE_DIR)
+        val filePaths = uris.mapIndexed { index, uri -> uri.copyToInputFileDir(resetDir = index == 0) }
+        GifFixActivity.start(this, filePaths)
+      }
+    } else {
+      toast(R.string.no_files_selected)
+    }
+  }
 
   override fun onCreateIfEulaAccepted(savedInstanceState: Bundle?) {
     setContentView(binding.root)
@@ -93,6 +120,12 @@ class MainActivity : BaseActivity() {
         ImportMvimgActivity.start(
           this@MainActivity, it.copyToInputFileDir()
         )
+      }
+    }
+    binding.mcvFixGifFormat.apply {
+      onClick { importForFixGifFormat() }
+      enableDropFile(this@MainActivity, "image/gif") {
+        GifFixActivity.start(this@MainActivity, listOf(it.copyToInputFileDir()))
       }
     }
 
@@ -153,6 +186,20 @@ class MainActivity : BaseActivity() {
       })
 
       else -> importForMvimgToGif(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) INT_FILE_OPEN_WAY_13 else INT_FILE_OPEN_WAY_DOCUMENT
+      )
+    }
+  }
+
+  private fun importForFixGifFormat(intFileOpenWay: Int = MySettings.fileOpenWay) {
+    when (intFileOpenWay) {
+      INT_FILE_OPEN_WAY_DOCUMENT -> arlImportFixGifFormatDocument.launch("image/gif")
+      INT_FILE_OPEN_WAY_13 -> arlImportFixGifFormat13.launch(Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+        type = "image/gif"
+        putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 100) // Allow multiple selection
+      })
+
+      else -> importForFixGifFormat(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) INT_FILE_OPEN_WAY_13 else INT_FILE_OPEN_WAY_DOCUMENT
       )
     }

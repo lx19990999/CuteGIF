@@ -145,4 +145,12 @@
   <string name="import_file_failed_please_try">File read failed, please try switching the file picker in the menu</string>
   <string name="save_as_video">Save as video</string>
   <string name="speed_warning_slower">ℹ️ For performance reasons, the current preview plays slower than the speed you selected. When exported later, the GIF will be generated at the speed you selected.</string>
+  <string name="fix_gif_format">Fix GIF Format</string>
+  <string name="fix_gif_format_description">Fix GIF format, converted GIF can play normally</string>
+  <string name="fixing_gif_format">Fixing GIF format…</string>
+  <string name="fixing_gif_format_d_percent">Fixing GIF format (%d%%)</string>
+  <string name="gif_format_fixed">GIF format fixed</string>
+  <string name="gif_format_fix_failed">GIF format fix failed</string>
+  <string name="no_files_selected">No files selected</string>
+  <string name="processing_file_d_of_d" formatted="false">Processing file %d of %d</string>
 </resources>
