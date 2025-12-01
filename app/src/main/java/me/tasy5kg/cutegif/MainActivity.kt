@@ -62,7 +62,8 @@ class MainActivity : BaseActivity() {
       importFileTryCatch {
         // Reset directory once before copying all files
         me.tasy5kg.cutegif.toolbox.FileTools.resetDirectory(me.tasy5kg.cutegif.MyConstants.INPUT_FILE_DIR)
-        val filePaths = it.mapIndexed { index, uri -> uri.copyToInputFileDir(resetDir = index == 0) }
+        // Don't reset again in copyToInputFileDir since we already reset above
+        val filePaths = it.map { uri -> uri.copyToInputFileDir(resetDir = false) }
         GifFixActivity.start(this, filePaths)
       }
     } else {
@@ -77,7 +78,8 @@ class MainActivity : BaseActivity() {
       importFileTryCatch {
         // Reset directory once before copying all files
         me.tasy5kg.cutegif.toolbox.FileTools.resetDirectory(me.tasy5kg.cutegif.MyConstants.INPUT_FILE_DIR)
-        val filePaths = uris.mapIndexed { index, uri -> uri.copyToInputFileDir(resetDir = index == 0) }
+        // Don't reset again in copyToInputFileDir since we already reset above
+        val filePaths = uris.map { uri -> uri.copyToInputFileDir(resetDir = false) }
         GifFixActivity.start(this, filePaths)
       }
     } else {
@@ -124,7 +126,7 @@ class MainActivity : BaseActivity() {
     }
     binding.mcvFixGifFormat.apply {
       onClick { importForFixGifFormat() }
-      enableDropFile(this@MainActivity, "image/gif") {
+      enableDropFile(this@MainActivity, "image/*") {
         GifFixActivity.start(this@MainActivity, listOf(it.copyToInputFileDir()))
       }
     }
@@ -193,9 +195,9 @@ class MainActivity : BaseActivity() {
 
   private fun importForFixGifFormat(intFileOpenWay: Int = MySettings.fileOpenWay) {
     when (intFileOpenWay) {
-      INT_FILE_OPEN_WAY_DOCUMENT -> arlImportFixGifFormatDocument.launch("image/gif")
+      INT_FILE_OPEN_WAY_DOCUMENT -> arlImportFixGifFormatDocument.launch("image/*")
       INT_FILE_OPEN_WAY_13 -> arlImportFixGifFormat13.launch(Intent(MediaStore.ACTION_PICK_IMAGES).apply {
-        type = "image/gif"
+        type = "image/*"
         putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 100) // Allow multiple selection
       })
 

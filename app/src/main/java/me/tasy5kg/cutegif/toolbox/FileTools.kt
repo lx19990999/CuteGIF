@@ -115,7 +115,39 @@ object FileTools {
 
   fun Uri.copyToInputFileDir(resetDir: Boolean = true): String {
     if (resetDir) resetDirectory(MyConstants.INPUT_FILE_DIR)
-    val inputFilePath = MyConstants.INPUT_FILE_DIR + FileName(this).name
+    
+    // Get file name from URI, with fallback to timestamp if name is invalid
+    val originalFileName = try {
+      FileName(this).name
+    } catch (e: Exception) {
+      Toolbox.logRed("copyToInputFileDir", "Error getting file name: ${e.message}, using fallback")
+      "file_${System.currentTimeMillis()}"
+    }
+    
+    // Use timestamp-based name to ensure uniqueness and preserve extension from URI if possible
+    val extension = try {
+      val ext = FileName(this).extension
+      if (ext.isNotEmpty() && ext.length < 10) ext else {
+        // Try to get extension from URI path or MIME type
+        this.lastPathSegment?.substringAfterLast('.', "")?.takeIf { it.length < 10 }
+          ?: (MyApplication.appContext.contentResolver.getType(this)?.substringAfterLast('/', "")?.takeIf { it.length < 10 }
+            ?: "tmp")
+      }
+    } catch (e: Exception) {
+      // Try to get extension from URI path or MIME type
+      this.lastPathSegment?.substringAfterLast('.', "")?.takeIf { it.length < 10 }
+        ?: (MyApplication.appContext.contentResolver.getType(this)?.substringAfterLast('/', "")?.takeIf { it.length < 10 }
+          ?: "tmp")
+    }
+    
+    val fileName = "input_${System.currentTimeMillis()}.$extension"
+    val inputFilePath = MyConstants.INPUT_FILE_DIR + fileName
+    
+    Toolbox.logRed("copyToInputFileDir", "Copying file from URI: $this")
+    Toolbox.logRed("copyToInputFileDir", "Original file name: $originalFileName")
+    Toolbox.logRed("copyToInputFileDir", "Using file name: $fileName")
+    Toolbox.logRed("copyToInputFileDir", "Target path: $inputFilePath")
+    
     MyApplication.appContext.contentResolver.openInputStream(this)!!.use { inputStream ->
       FileOutputStream(inputFilePath).use { outputStream ->
         var toastedPleaseWait = false
@@ -133,6 +165,18 @@ object FileTools {
         }
       }
     }
+    
+    // Verify file was copied successfully
+    val copiedFile = File(inputFilePath)
+    if (!copiedFile.exists()) {
+      throw IllegalStateException("File copy failed: $inputFilePath does not exist")
+    }
+    if (copiedFile.length() == 0L) {
+      throw IllegalStateException("File copy failed: $inputFilePath is empty")
+    }
+    
+    Toolbox.logRed("copyToInputFileDir", "File copied successfully: $inputFilePath, size: ${copiedFile.length()} bytes")
+    
     return inputFilePath
   }
 
