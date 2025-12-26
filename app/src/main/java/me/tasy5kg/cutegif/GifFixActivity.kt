@@ -114,7 +114,143 @@ class GifFixActivity : BaseActivity() {
             successCount++
             logRed("GifFix", "File $currentFile/$totalFiles: Already standard GIF, copied")
           }
-          FileFormat.HEIF, FileFormat.WEBP, FileFormat.OTHER -> {
+          FileFormat.HEIF -> {
+            // For HEIF, first check if it's a single frame image or animated sequence
+            logRed("GifFix", "File $currentFile/$totalFiles: Getting media info for HEIF file: $inputPath")
+            val mediaInfo = MediaTools.mediaInformation(inputPath)
+            
+            // Get video stream outside the if-else block so it's accessible later
+            val videoStream = mediaInfo?.streams?.firstOrNull { it.type == "video" }
+            
+            val isSingleFrame = if (mediaInfo == null) {
+              // If we can't get media info, treat as single frame (most HEIF images are single frame)
+              logRed("GifFix HEIF", "File $currentFile/$totalFiles: Failed to get media information, treating as single frame by default")
+              true
+            } else if (videoStream == null) {
+              // No video stream means it's a single frame image
+              logRed("GifFix HEIF", "File $currentFile/$totalFiles: No video stream detected, treating as single frame")
+              true
+            } else {
+              // Check frame count and duration
+              val nbFrames = videoStream.getStringProperty("nb_frames")?.toIntOrNull()
+              val duration = videoStream.getStringProperty("duration")?.toDoubleOrNull()
+              val isSingle = (nbFrames != null && nbFrames <= 1) || (duration != null && duration <= 0.1)
+              logRed("GifFix HEIF", "File $currentFile/$totalFiles: Video stream found - nb_frames: $nbFrames, duration: $duration, isSingleFrame: $isSingle")
+              isSingle
+            }
+            
+            if (isSingleFrame) {
+              // Single frame HEIF: just rename to .heif extension
+              val outputUri = createNewFile(FileTools.FileName(inputPath).nameWithoutExtension, "heif")
+              copyFile(inputPath, outputUri, false)
+              successCount++
+              logRed("GifFix", "File $currentFile/$totalFiles: Single frame HEIF, renamed to .heif")
+            } else {
+              // Animated HEIF: convert to GIF
+              val outputUri = createNewFile(FileTools.FileName(inputPath).nameWithoutExtension, "gif")
+              val outputPath = File(cacheDir, "gif_fix_output_${System.currentTimeMillis()}.gif").absolutePath
+              
+              val fps = try {
+                val fpsStr = videoStream?.averageFrameRate ?: "10/1"
+                logRed("GifFix", "File $currentFile/$totalFiles: Detected fps: $fpsStr")
+                val parts = fpsStr.split("/")
+                if (parts.size == 2) {
+                  parts[0].toDouble() / parts[1].toDouble()
+                } else {
+                  10.0
+                }
+              } catch (e: Exception) {
+                logRed("GifFix fps error", "File $currentFile/$totalFiles: Failed to parse fps: ${e.message}")
+                10.0
+              }
+              
+              // Convert animated HEIF to GIF
+              val inputPathForFFmpeg = inputFile.absolutePath
+              val outputPathForFFmpeg = File(outputPath).absolutePath
+              logRed("GifFix", "File $currentFile/$totalFiles: FFmpeg input path: $inputPathForFFmpeg")
+              logRed("GifFix", "File $currentFile/$totalFiles: FFmpeg output path: $outputPathForFFmpeg")
+              
+              val command = "$FFMPEG_COMMAND_PREFIX_FOR_ALL_AN -i \"$inputPathForFFmpeg\" " +
+                "-vf \"fps=$fps,scale=iw:ih:flags=lanczos,split[s0][s1];[s0]palettegen=reserve_transparent=1[p];[s1][p]paletteuse\" " +
+                "-c:v gif -y \"$outputPathForFFmpeg\""
+              
+              // Execute FFmpeg conversion (same logic as below for WEBP/OTHER)
+              try {
+                logRed("GifFix command", "File $currentFile/$totalFiles: HEIF animated conversion command generated")
+                logRed("GifFix command", "File $currentFile/$totalFiles: Command preview: ${command.take(200)}...")
+                logRed("GifFix", "File $currentFile/$totalFiles: Command length: ${command.length}")
+                
+                // Use CountDownLatch to wait for async execution
+                val latch = java.util.concurrent.CountDownLatch(1)
+                var conversionSuccess = false
+                
+                logRed("GifFix", "File $currentFile/$totalFiles: Starting FFmpeg execution for animated HEIF")
+                var ffmpegStarted = false
+                FFmpegKit.executeAsync(command, { session ->
+                  ffmpegStarted = true
+                  logRed("GifFix", "File $currentFile/$totalFiles: FFmpeg session callback triggered")
+                  val allOutput = session.allLogsAsString
+                  val returnCode = session.returnCode
+                  logRed("GifFix FFmpeg output", "File $currentFile/$totalFiles:\nReturn code: $returnCode\nIs success: ${returnCode.isValueSuccess}\nOutput length: ${allOutput.length}\nOutput: $allOutput")
+                  
+                  if (returnCode.isValueSuccess) {
+                    val outputFile = File(outputPath)
+                    logRed("GifFix", "File $currentFile/$totalFiles: Checking output file: $outputPath, exists: ${outputFile.exists()}, size: ${if (outputFile.exists()) outputFile.length() else 0}")
+                    if (outputFile.exists() && outputFile.length() > 0) {
+                      copyFile(outputPath, outputUri, true)
+                      conversionSuccess = true
+                      logRed("GifFix", "File $currentFile/$totalFiles: Converted animated HEIF successfully")
+                    } else {
+                      logRed("GifFix error", "File $currentFile/$totalFiles: Output file not created or empty: $outputPath")
+                    }
+                  } else {
+                    logRed("GifFix error", "File $currentFile/$totalFiles: Animated HEIF conversion failed\nReturn code: $returnCode\nOutput: $allOutput")
+                  }
+                  latch.countDown()
+                }, { logCallback ->
+                  logRed("GifFix FFmpeg log", "File $currentFile/$totalFiles: ${logCallback.message}")
+                }, { _ ->
+                  // Progress callback
+                })
+                
+                logRed("GifFix", "File $currentFile/$totalFiles: FFmpegKit.executeAsync called, waiting for execution...")
+                val timeout = 60L
+                logRed("GifFix", "File $currentFile/$totalFiles: Waiting for FFmpeg conversion (timeout: ${timeout}s)")
+                val startWaitTime = System.currentTimeMillis()
+                val waited = latch.await(timeout, java.util.concurrent.TimeUnit.SECONDS)
+                val waitDuration = System.currentTimeMillis() - startWaitTime
+                logRed("GifFix", "File $currentFile/$totalFiles: Wait completed, waited: ${waitDuration}ms, result: $waited, ffmpegStarted: $ffmpegStarted")
+                
+                if (!waited) {
+                  failCount++
+                  logRed("GifFix error", "File $currentFile/$totalFiles: Animated HEIF conversion timeout after ${timeout}s")
+                  FFmpegKit.cancel()
+                  val outputFile = File(outputPath)
+                  if (outputFile.exists() && outputFile.length() > 0) {
+                    logRed("GifFix", "File $currentFile/$totalFiles: Output file exists despite timeout, attempting to use it")
+                    try {
+                      copyFile(outputPath, outputUri, true)
+                      conversionSuccess = true
+                      successCount++
+                      logRed("GifFix", "File $currentFile/$totalFiles: Successfully used output file despite timeout")
+                    } catch (e: Exception) {
+                      logRed("GifFix error", "File $currentFile/$totalFiles: Failed to copy output file: ${e.message}")
+                    }
+                  }
+                } else if (conversionSuccess) {
+                  successCount++
+                  logRed("GifFix", "File $currentFile/$totalFiles: Animated HEIF conversion succeeded")
+                } else {
+                  failCount++
+                  logRed("GifFix error", "File $currentFile/$totalFiles: Animated HEIF conversion failed")
+                }
+              } catch (e: Exception) {
+                failCount++
+                logRed("GifFix error", "File $currentFile/$totalFiles: Exception during animated HEIF conversion: ${e.message}\n${e.stackTraceToString()}")
+              }
+            }
+          }
+          FileFormat.WEBP, FileFormat.OTHER -> {
             // Need to convert to standard GIF
             val outputUri = createNewFile(FileTools.FileName(inputPath).nameWithoutExtension, "gif")
             val outputPath = File(cacheDir, "gif_fix_output_${System.currentTimeMillis()}.gif").absolutePath
@@ -364,13 +500,7 @@ class GifFixActivity : BaseActivity() {
                   }
                 }
               }
-              FileFormat.HEIF -> {
-                // For HEIF, let FFmpeg auto-detect the format (some FFmpeg builds don't support -f heif)
-                // HEIF animation sequences may need special handling
-                "$FFMPEG_COMMAND_PREFIX_FOR_ALL_AN -i \"$inputPathForFFmpeg\" " +
-                  "-vf \"fps=$fps,scale=iw:ih:flags=lanczos,split[s0][s1];[s0]palettegen=reserve_transparent=1[p];[s1][p]paletteuse\" " +
-                  "-c:v gif -y \"$outputPathForFFmpeg\""
-              }
+              // HEIF is handled separately above, this branch should not be reached
               else -> {
                 // For other formats, let FFmpeg auto-detect
                 "$FFMPEG_COMMAND_PREFIX_FOR_ALL_AN -i \"$inputPathForFFmpeg\" " +

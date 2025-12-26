@@ -195,7 +195,7 @@ object Toolbox {
 
   fun logRed(tag: Any?, msg: Any?) {
     // Always log, even in release builds, for debugging purposes
-    Log.e(tag.toString(), msg.toString())
+      Log.e(tag.toString(), msg.toString())
   }
 
   fun Double.closestEven() = (this / 2).roundToInt() * 2
